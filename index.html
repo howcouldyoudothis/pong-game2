@@ -97,4 +97,137 @@ let rightScore = 0;
 // Game loop
 let upPressed = false;
 let downPressed = false;
-let wPressed = f
+let wPressed = false;
+let sPressed = false;
+
+// Increase speed factor after each score
+let speedIncrementFactor = 0.5;
+
+// Event Listeners for keys
+document.addEventListener('keydown', keyDownHandler);
+document.addEventListener('keyup', keyUpHandler);
+
+function keyDownHandler(e) {
+  if (e.code === 'ArrowUp') upPressed = true;
+  else if (e.code === 'ArrowDown') downPressed = true;
+
+  if (e.code === 'KeyW') wPressed = true;
+  else if (e.code === 'KeyS') sPressed = true;
+}
+
+function keyUpHandler(e) {
+  if (e.code === 'ArrowUp') upPressed = false;
+  else if (e.code === 'ArrowDown') downPressed = false;
+
+  if (e.code === 'KeyW') wPressed = false;
+  else if (e.code === 'KeyS') sPressed = false;
+}
+
+function movePaddles() {
+  if (wPressed && leftPaddleY > 0) {
+    leftPaddleY -= paddleSpeed;
+  }
+  if (sPressed && leftPaddleY < canvas.height - paddleHeight) {
+    leftPaddleY += paddleSpeed;
+  }
+
+  if (upPressed && rightPaddleY > 0) {
+    rightPaddleY -= paddleSpeed;
+  }
+  if (downPressed && rightPaddleY < canvas.height - paddleHeight) {
+    rightPaddleY += paddleSpeed;
+  }
+}
+
+function drawPaddles() {
+  ctx.fillStyle = '#fff';
+  // Left paddle
+  ctx.fillRect(20, leftPaddleY, paddleWidth, paddleHeight);
+  // Right paddle
+  ctx.fillRect(canvas.width - 20 - paddleWidth, rightPaddleY, paddleWidth, paddleHeight);
+}
+
+function resetBall() {
+  ballX = canvas.width / 2;
+  ballY = canvas.height / 2;
+  ballAngleX = Math.random() < 0.5 ? -1 : 1;
+  ballAngleY = (Math.random() * 2 - 1);
+  // Keep ball speed at the last known speed, so it doesn't slow down after a reset
+  // Just position and direction are reset, speed remains incremented after each score
+}
+
+function updateBall() {
+  ballX += ballAngleX * ballSpeed;
+  ballY += ballAngleY * ballSpeed;
+
+  // Collision with top & bottom
+  if (ballY <= 0 || ballY + ballSize >= canvas.height) {
+    ballAngleY = -ballAngleY;
+  }
+
+  // Check collision with left paddle
+  if (ballX <= 20 + paddleWidth && ballY + ballSize >= leftPaddleY && ballY <= leftPaddleY + paddleHeight) {
+    ballAngleX = -ballAngleX;
+    let hitPos = (ballY - (leftPaddleY + paddleHeight / 2)) / (paddleHeight / 2);
+    ballAngleY = hitPos; // change angle depending on where it hits the paddle
+    ballX = 20 + paddleWidth; // prevent clipping
+  }
+
+  // Check collision with right paddle
+  if (ballX + ballSize >= canvas.width - 20 - paddleWidth && 
+      ballY + ballSize >= rightPaddleY && ballY <= rightPaddleY + paddleHeight) {
+    ballAngleX = -ballAngleX;
+    let hitPos = (ballY - (rightPaddleY + paddleHeight / 2)) / (paddleHeight / 2);
+    ballAngleY = hitPos;
+    ballX = canvas.width - 20 - paddleWidth - ballSize; // prevent clipping
+  }
+
+  // Check scoring
+  if (ballX < 0) {
+    // Right scores
+    rightScore++;
+    document.getElementById('rightScore').textContent = rightScore;
+    ballSpeed += speedIncrementFactor; // increase ball speed
+    resetBall();
+  }
+
+  if (ballX > canvas.width) {
+    // Left scores
+    leftScore++;
+    document.getElementById('leftScore').textContent = leftScore;
+    ballSpeed += speedIncrementFactor; // increase ball speed
+    resetBall();
+  }
+}
+
+function drawBall() {
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(ballX, ballY, ballSize, ballSize);
+}
+
+function drawCenterLine() {
+  ctx.strokeStyle = '#aaa';
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.moveTo(canvas.width / 2, 0);
+  ctx.lineTo(canvas.width / 2, canvas.height);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function gameLoop() {
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+  
+  drawCenterLine();
+  movePaddles();
+  updateBall();
+  drawPaddles();
+  drawBall();
+  
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
