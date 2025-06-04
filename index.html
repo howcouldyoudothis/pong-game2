@@ -6,19 +6,28 @@
 <title>Improved Pong Game</title>
 <style>
   html, body {
-    margin: 0; 
+    margin: 0;
     padding: 0;
-    background: #000; 
-    font-family: Arial, sans-serif; 
-    color: #fff; 
-    overflow: hidden; 
+    background: #000;
+    font-family: Arial, sans-serif;
+    color: #fff;
+    overflow: hidden;
     height: 100%;
   }
 
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+  }
+
   canvas {
-    display: block; 
+    display: block;
     margin: 0 auto;
-    background: #333;
+    background: radial-gradient(circle at center, #444 0%, #222 100%);
+    box-shadow: 0 0 10px #000;
+    border-radius: 8px;
   }
 
   .scoreboard {
@@ -31,6 +40,7 @@
     letter-spacing: 2px;
     user-select: none;
     z-index: 1;
+    text-shadow: 0 0 10px #fff;
   }
 
   .instructions {
@@ -39,7 +49,8 @@
     width: 100%;
     text-align: center;
     font-size: 1em;
-    opacity: 0.7;
+    opacity: 0.8;
+    color: #ddd;
     user-select: none;
     z-index: 1;
   }
@@ -56,7 +67,7 @@
   <span id="leftScore">0</span> : <span id="rightScore">0</span>
 </div>
 <div class="instructions">
-  Left Paddle: W/S keys &nbsp;&nbsp;|&nbsp;&nbsp; Right Paddle: Up/Down keys
+  Left Paddle: W/S keys &nbsp;&nbsp;|&nbsp;&nbsp; Right Paddle: Up/Down keys &nbsp;&nbsp;|&nbsp;&nbsp; R: Reset
 </div>
 <canvas id="gameCanvas"></canvas>
 
@@ -78,15 +89,20 @@ window.addEventListener('resize', setCanvasSize);
 // Paddles
 const paddleWidth = 20;
 const paddleHeight = 100;
-const paddleSpeed = 7; // fixed paddle speed
+const maxPaddleSpeed = 5;
+const paddleAccel = 0.5;
+const paddleFriction = 0.85;
 let leftPaddleY = (canvas.height - paddleHeight) / 2;
 let rightPaddleY = (canvas.height - paddleHeight) / 2;
+let leftPaddleVel = 0;
+let rightPaddleVel = 0;
 
 // Ball
 const ballSize = 15;
 let ballX = canvas.width / 2;
 let ballY = canvas.height / 2;
-let ballSpeed = 4; // start slow
+const initialBallSpeed = 2; // start slower
+let ballSpeed = initialBallSpeed;
 let ballAngleX = Math.random() < 0.5 ? -1 : 1;
 let ballAngleY = (Math.random() * 2 - 1); // random vertical direction
 
@@ -101,7 +117,7 @@ let wPressed = false;
 let sPressed = false;
 
 // Increase speed factor after each score
-let speedIncrementFactor = 0.5;
+let speedIncrementFactor = 0.1;
 
 // Event Listeners for keys
 document.addEventListener('keydown', keyDownHandler);
@@ -113,6 +129,7 @@ function keyDownHandler(e) {
 
   if (e.code === 'KeyW') wPressed = true;
   else if (e.code === 'KeyS') sPressed = true;
+  else if (e.code === 'KeyR') resetGame();
 }
 
 function keyUpHandler(e) {
@@ -124,19 +141,21 @@ function keyUpHandler(e) {
 }
 
 function movePaddles() {
-  if (wPressed && leftPaddleY > 0) {
-    leftPaddleY -= paddleSpeed;
-  }
-  if (sPressed && leftPaddleY < canvas.height - paddleHeight) {
-    leftPaddleY += paddleSpeed;
-  }
+  if (wPressed) leftPaddleVel -= paddleAccel;
+  if (sPressed) leftPaddleVel += paddleAccel;
+  leftPaddleVel *= paddleFriction;
+  leftPaddleVel = Math.max(-maxPaddleSpeed, Math.min(maxPaddleSpeed, leftPaddleVel));
+  leftPaddleY += leftPaddleVel;
+  if (leftPaddleY < 0) { leftPaddleY = 0; leftPaddleVel = 0; }
+  if (leftPaddleY > canvas.height - paddleHeight) { leftPaddleY = canvas.height - paddleHeight; leftPaddleVel = 0; }
 
-  if (upPressed && rightPaddleY > 0) {
-    rightPaddleY -= paddleSpeed;
-  }
-  if (downPressed && rightPaddleY < canvas.height - paddleHeight) {
-    rightPaddleY += paddleSpeed;
-  }
+  if (upPressed) rightPaddleVel -= paddleAccel;
+  if (downPressed) rightPaddleVel += paddleAccel;
+  rightPaddleVel *= paddleFriction;
+  rightPaddleVel = Math.max(-maxPaddleSpeed, Math.min(maxPaddleSpeed, rightPaddleVel));
+  rightPaddleY += rightPaddleVel;
+  if (rightPaddleY < 0) { rightPaddleY = 0; rightPaddleVel = 0; }
+  if (rightPaddleY > canvas.height - paddleHeight) { rightPaddleY = canvas.height - paddleHeight; rightPaddleVel = 0; }
 }
 
 function drawPaddles() {
@@ -154,6 +173,15 @@ function resetBall() {
   ballAngleY = (Math.random() * 2 - 1);
   // Keep ball speed at the last known speed, so it doesn't slow down after a reset
   // Just position and direction are reset, speed remains incremented after each score
+}
+
+function resetGame() {
+  leftScore = 0;
+  rightScore = 0;
+  document.getElementById('leftScore').textContent = leftScore;
+  document.getElementById('rightScore').textContent = rightScore;
+  ballSpeed = initialBallSpeed;
+  resetBall();
 }
 
 function updateBall() {
